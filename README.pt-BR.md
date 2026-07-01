@@ -57,12 +57,33 @@ Vai aparecer um prompt `You:`. A partir daí:
 | uma mensagem + Enter | **todos** os agentes respondem (a ordem reveza a cada rodada) |
 | `@nome mensagem` | só aquele agente responde (ex.: `@codex o que você acha?`) |
 | Enter vazio | os agentes continuam a conversa **entre si** por uma rodada |
+| `/who` | mostra os participantes e quem está silenciado |
+| `/mute <nome>` / `/unmute <nome>` | silencia ou reativa um agente (silenciados não respondem; `@nome` ainda alcança) |
+| `/only <nomes>` / `/all` | ativa só alguns agentes, ou todos |
 | `/clear` | começa a conversa do zero (sem reiniciar o programa) |
 | `/save` | salva o histórico atual em um arquivo `.md` |
+| `/rules` | vê ou edita regras compartilhadas que todos os agentes seguem (`/rules add <texto>`, `/rules del <n>`, `/rules clear`) |
+| `/cost` | mostra a estimativa de tokens usados na sessão |
+| `/compact` | resume as mensagens antigas pra encolher o prompt (economiza tokens de entrada) |
+| `/parallel` | alterna respostas simultâneas (mais rápido; os agentes não se veem na mesma rodada) |
 | `/help` | mostra os comandos |
 | `/exit` | encerra |
 
 As respostas chamam os CLIs de verdade, então levam alguns segundos por agente (aparece "is typing…" enquanto isso).
+
+---
+
+## Regras e custo
+
+**Regras.** `/rules` mostra as regras compartilhadas que os agentes devem seguir; `/rules add <texto>` adiciona uma, `/rules del <n>` remove e `/rules clear` apaga todas. As regras são salvas em `.team-rules.md` na pasta atual (então cada projeto tem as suas) e são injetadas no prompt de todo agente. Regras que limitam a saída — ex.: *"responda em no máximo 5 frases"* — são uma das formas mais confiáveis de cortar tokens de saída em todos os modelos.
+
+**Custo.** Depois de cada resposta o chat mostra uma estimativa de tokens (entrada/saída) daquela chamada, e `/cost` mostra o total acumulado da sessão. É uma estimativa aproximada por tamanho de texto (~4 caracteres/token), não o tokenizer exato do modelo, e não inclui o prompt de sistema interno de cada CLI — use como bússola pra comparar turnos e ver o efeito das regras, não como fatura.
+
+**Silenciar (a maior alavanca de tokens).** Com vários agentes, todos respondendo todo turno multiplica o custo. Use `/mute`, `/only` e `/all` pra manter ativos só os agentes que você precisa para uma dada pergunta — os silenciados não respondem, mas o `@nome` ainda alcança um deles pontualmente. O `/who` mostra o estado atual.
+
+**Compressão de contexto.** Conforme a conversa cresce, o histórico inteiro é reenviado a cada turno, então os tokens de entrada sobem. O `/compact` resume as mensagens antigas em um bloco curto (mantendo as mais recentes na íntegra), cortando tokens de entrada. Ele usa o modelo `SUMMARIZER` definido no topo do script — aponte para um modelo barato/gratuito pra economia real — e você pode definir `AUTO_COMPACT_TOKENS` pra compactar automaticamente acima de um limite. Se o resumidor falhar, o histórico fica intacto.
+
+**Respostas em paralelo.** Por padrão os agentes respondem em sequência, então cada um vê a resposta do anterior. Com vários agentes isso fica lento; o `/parallel` (ou a flag `--parallel`) faz eles responderem ao mesmo tempo — bem mais rápido, mas dentro de uma rodada eles só veem a rodada anterior, não uns aos outros.
 
 ---
 
@@ -114,6 +135,21 @@ Para adicionar um terceiro participante, basta incluir um item na lista. Preench
 ```
 
 Depois rode `python3 ~/scripts/agents_team.py --profile review`. Você pode ter 2, 3 ou mais vozes, misturar comandos de trabalho e pessoais, etc. Use **nomes únicos** dentro de cada time (o `@nome` usa o nome).
+
+---
+
+### Adicionando outros CLIs (OpenCode, Antigravity, …)
+
+Qualquer CLI com um modo headless "prompt entra → texto sai" encaixa — adicione uma entrada com o `cmd`, e o prompt é anexado como último argumento:
+
+- **Antigravity:** `["agy", "-p"]`
+- **OpenCode:** `["opencode", "run", "--model", "provider/model"]` — mais de 75 provedores, então esse agente pode ser qualquer modelo
+
+A saída é lida como texto puro por padrão (cores ANSI removidas). Se um CLI emitir JSON, adicione um campo `"parse"`: `"json:result"` parseia o stdout como JSON e pega o campo `result`; `"jsonl:msg.content"` lê linhas JSON de streaming e pega o último `msg.content` (chaves com ponto entram em JSON aninhado; se falhar, cai para texto puro). Exemplo — Claude em modo JSON:
+
+```python
+{"name": "Claude", "cmd": ["claude", "-p", "--output-format", "json"], "parse": "json:result"}
+```
 
 ---
 

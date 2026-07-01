@@ -57,12 +57,33 @@ A `You:` prompt appears. From there:
 | a message + Enter | **all** agents reply (the order rotates each round) |
 | `@name message` | only that agent replies (e.g. `@codex what do you think?`) |
 | empty Enter | the agents continue the conversation **among themselves** for one round |
+| `/who` | show team members and who's muted |
+| `/mute <name>` / `/unmute <name>` | silence or re-activate an agent (muted agents skip replies; `@name` still reaches them) |
+| `/only <names>` / `/all` | activate only some agents, or everyone |
 | `/clear` | start the conversation over (without restarting the program) |
 | `/save` | save the current transcript to a `.md` file |
+| `/rules` | view or edit shared rules all agents must follow (`/rules add <text>`, `/rules del <n>`, `/rules clear`) |
+| `/cost` | show estimated token usage for the session |
+| `/compact` | summarize older messages to shrink the prompt (saves input tokens) |
+| `/parallel` | toggle simultaneous replies (faster; agents don't see each other within a round) |
 | `/help` | show the commands |
 | `/exit` | quit |
 
 Replies call the real CLIs, so they take a few seconds per agent (you'll see "is typing…" meanwhile).
+
+---
+
+## Rules & cost
+
+**Rules.** `/rules` shows the shared rules the agents must follow; `/rules add <text>` adds one, `/rules del <n>` removes one, and `/rules clear` wipes them. Rules are saved to `.team-rules.md` in the current folder (so each project has its own) and are injected into every agent's prompt. Rules that constrain output — e.g. *"answer in at most 5 sentences"* — are one of the most reliable ways to cut output tokens across all models.
+
+**Cost.** After every reply the chat prints an estimated token count (input/output) for that call, and `/cost` shows the running total for the session. This is a rough estimate based on text length (~4 chars/token), not the model's exact tokenizer, and it doesn't include each CLI's own hidden system prompt — treat it as a gauge to compare turns and see the effect of your rules, not a billing figure.
+
+**Muting (the biggest token lever).** With several agents, having everyone reply every turn multiplies cost. Use `/mute`, `/only` and `/all` to keep just the agents you need active for a given question — muted agents skip replies, but `@name` still reaches them for a one-off. `/who` shows the current state.
+
+**Context compression.** As a conversation grows, the whole transcript is re-sent every turn, so input tokens climb. `/compact` summarizes older messages into a short block (keeping the most recent verbatim), cutting input tokens. It uses the `SUMMARIZER` model set at the top of the script — point it at a cheap/free model for real savings — and you can set `AUTO_COMPACT_TOKENS` to compact automatically past a threshold. If the summarizer fails, the history is left untouched.
+
+**Parallel replies.** By default agents reply in sequence, so each sees the previous one's reply. With several agents that's slow; `/parallel` (or the `--parallel` flag) makes them reply simultaneously — much faster, but within a round they only see the previous round, not each other.
 
 ---
 
@@ -114,6 +135,21 @@ To add a third member, just add an item to the list. Filling `instruction` gives
 ```
 
 Then run `python3 ~/scripts/agents_team.py --profile review`. You can have 2, 3 or more voices, mix work and personal commands, etc. Use **unique names** within a team (the `@name` mention uses the name).
+
+---
+
+### Adding other CLIs (OpenCode, Antigravity, …)
+
+Any CLI with a headless "prompt in → text out" mode fits — add an entry with its `cmd`, and the prompt is appended as the last argument:
+
+- **Antigravity:** `["agy", "-p"]`
+- **OpenCode:** `["opencode", "run", "--model", "provider/model"]` — 75+ providers, so this one agent can be any model
+
+Output is read as plain text by default (ANSI colors stripped). If a CLI emits JSON, add a `"parse"` field: `"json:result"` parses stdout as JSON and takes the `result` field; `"jsonl:msg.content"` reads streaming JSON lines and takes the last `msg.content` (dotted keys dig into nested JSON; on failure it falls back to plain text). Example — Claude in JSON mode:
+
+```python
+{"name": "Claude", "cmd": ["claude", "-p", "--output-format", "json"], "parse": "json:result"}
+```
 
 ---
 
