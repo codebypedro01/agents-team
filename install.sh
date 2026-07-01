@@ -537,15 +537,54 @@ if __name__ == "__main__":
     main()
 AGENTS_TEAM_EOF
 
-# Pick the rc file for the user's shell so the command is found
+# Install real commands instead of relying on aliases. Aliases only exist after
+# the current shell reloads its rc file; executables work in normal PATH lookup.
+BIN_DIR="${AGENTS_TEAM_BIN_DIR:-$HOME/.local/bin}"
+mkdir -p "$BIN_DIR"
+
+cat > "$BIN_DIR/agents-team" << 'AGENTS_TEAM_CMD_EOF'
+#!/usr/bin/env sh
+exec python3 "$HOME/scripts/agents_team.py" "$@"
+AGENTS_TEAM_CMD_EOF
+
+cat > "$BIN_DIR/agents-team-personal" << 'AGENTS_TEAM_PERSONAL_CMD_EOF'
+#!/usr/bin/env sh
+exec python3 "$HOME/scripts/agents_team.py" --profile personal "$@"
+AGENTS_TEAM_PERSONAL_CMD_EOF
+
+chmod +x "$HOME/scripts/agents_team.py" "$BIN_DIR/agents-team" "$BIN_DIR/agents-team-personal"
+
+# Pick the rc file for the user's shell so ~/.local/bin is found in future shells.
 case "${SHELL##*/}" in
   zsh) RC="$HOME/.zshrc" ;;
-  *)   RC="$HOME/.bashrc" ;;
+  bash) RC="$HOME/.bashrc" ;;
+  *)   RC="$HOME/.profile" ;;
 esac
 
-add_alias() { grep -qxF "$1" "$RC" 2>/dev/null || echo "$1" >> "$RC"; }
-add_alias "alias agents-team='python3 ~/scripts/agents_team.py'"
-add_alias "alias agents-team-personal='python3 ~/scripts/agents_team.py --profile personal'"
+add_line() { grep -qxF "$1" "$RC" 2>/dev/null || echo "$1" >> "$RC"; }
+in_path() {
+  case ":$PATH:" in
+    *":$1:"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
 
-echo "Installed. Aliases added to $RC."
-echo "Open a new terminal (or run: source $RC), then run:  agents-team"
+if ! in_path "$BIN_DIR"; then
+  if [ "$BIN_DIR" = "$HOME/.local/bin" ]; then
+    add_line 'export PATH="$HOME/.local/bin:$PATH"'
+  else
+    add_line "export PATH=\"$BIN_DIR:\$PATH\""
+  fi
+fi
+
+echo "Installed."
+echo "Script:   $HOME/scripts/agents_team.py"
+echo "Commands: $BIN_DIR/agents-team"
+echo "          $BIN_DIR/agents-team-personal"
+if in_path "$BIN_DIR"; then
+  echo "Run:      agents-team"
+else
+  echo "Added $BIN_DIR to PATH in $RC."
+  echo "Run this once in the current terminal, then use agents-team:"
+  echo "  export PATH=\"$BIN_DIR:\$PATH\""
+fi

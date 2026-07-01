@@ -14,7 +14,7 @@ Você digita e os agentes de IA respondem na mesma conversa: eles veem as mensag
 2. **Claude Code** instalado e autenticado — confira com `claude --version`.
 3. **Codex CLI** instalado e autenticado — confira com `codex --version`.
 
-**Plataformas:** funciona direto no Linux, macOS e no **WSL** (Windows Subsystem for Linux). No Windows nativo (PowerShell) o script Python roda igual, mas a etapa do atalho é diferente e o `claude`/`codex` precisam estar instalados como comandos do próprio Windows — veja [Windows nativo](#windows-nativo).
+**Plataformas:** funciona direto no Linux, macOS e no **WSL** (Windows Subsystem for Linux). No Windows nativo (PowerShell) o script Python roda igual, mas a etapa de criação do comando é diferente e o `claude`/`codex` precisam estar instalados como comandos do próprio Windows — veja [Windows nativo](#windows-nativo).
 
 ---
 
@@ -27,14 +27,16 @@ bash install.sh
 O instalador:
 
 - cria o script em `~/scripts/agents_team.py`;
-- registra os comandos `agents-team` e `agents-team-personal` no arquivo de inicialização certo do seu shell (ele detecta sozinho **zsh** → `~/.zshrc` ou **bash** → `~/.bashrc`).
+- cria os comandos `agents-team` e `agents-team-personal` em `~/.local/bin`;
+- garante que `~/.local/bin` esteja no PATH no arquivo de inicialização certo do seu shell (ele detecta sozinho **zsh** → `~/.zshrc` ou **bash** → `~/.bashrc`).
 
-Depois de instalar, **abra um terminal novo** (ou rode `source ~/.zshrc` / `source ~/.bashrc`) para os comandos passarem a valer.
+Se `~/.local/bin` já estiver no seu PATH, os comandos funcionam imediatamente. Caso contrário, abra um terminal novo ou rode a linha `export PATH=...` mostrada pelo instalador.
 
-> Prefere não rodar um script? Salve o `agents_team.py` em qualquer pasta e adicione o atalho você mesmo:
+> Prefere não rodar um script? Salve o `agents_team.py` em qualquer pasta e adicione o comando você mesmo:
 > ```bash
-> echo "alias agents-team='python3 /caminho/para/agents_team.py'" >> ~/.zshrc   # ou ~/.bashrc
-> source ~/.zshrc
+> mkdir -p ~/.local/bin
+> chmod +x /caminho/para/agents_team.py
+> ln -sf /caminho/para/agents_team.py ~/.local/bin/agents-team
 > ```
 
 ---
@@ -162,7 +164,7 @@ O `/save` gera um arquivo `team_<perfil>_<data-hora>.md` **na pasta em que você
 ## Solução de problemas
 
 **`command not found: agents-team`**
-Abra um terminal novo — o atalho só vale em shells iniciados depois da instalação. Se ainda falhar, confirme que o atalho está no arquivo de inicialização do seu shell (`~/.zshrc` para zsh, `~/.bashrc` para bash) e rode `source` nele.
+Confirme se `~/.local/bin` está no seu PATH com `echo $PATH`. Se estiver faltando, abra um terminal novo ou rode `export PATH="$HOME/.local/bin:$PATH"` no terminal atual.
 
 **`[error] 'claude' (profile 'work') is not on your PATH`**
 O CLI daquele perfil não foi encontrado. Confira se ele está instalado e logado (`claude --version`, `codex --version`) e se o nome em `cmd`, dentro do bloco `PROFILES`, está correto.
@@ -175,7 +177,7 @@ O CLI daquele perfil não foi encontrado. Confira se ele está instalado e logad
 
 No Windows nativo (sem WSL), o `agents_team.py` roda normalmente com Python, mas:
 
-- não há `bash`/`alias` — inicie direto com `python agents_team.py` (ou crie uma função no perfil do PowerShell);
+- não há configuração de comando no estilo bash — inicie direto com `python agents_team.py` (ou crie uma função no perfil do PowerShell);
 - o `claude` e o `codex` precisam estar instalados como comandos **do Windows** e no PATH (uma instalação feita dentro do WSL não é visível no Windows nativo).
 
 Se você já usa o WSL, continuar nele é o caminho mais simples.

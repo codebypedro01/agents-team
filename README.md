@@ -14,7 +14,7 @@ You type, and the AI agents reply in the same conversation: they see each other'
 2. **Claude Code** installed and authenticated — check with `claude --version`.
 3. **Codex CLI** installed and authenticated — check with `codex --version`.
 
-**Platforms:** works out of the box on Linux, macOS and **WSL** (Windows Subsystem for Linux). On native Windows (PowerShell) the Python script runs the same, but the alias step is different and `claude`/`codex` must be installed as native Windows commands — see [Native Windows](#native-windows).
+**Platforms:** works out of the box on Linux, macOS and **WSL** (Windows Subsystem for Linux). On native Windows (PowerShell) the Python script runs the same, but the command setup is different and `claude`/`codex` must be installed as native Windows commands — see [Native Windows](#native-windows).
 
 ---
 
@@ -27,14 +27,16 @@ bash install.sh
 The installer:
 
 - creates the script at `~/scripts/agents_team.py`;
-- registers the commands `agents-team` and `agents-team-personal` in the right startup file for your shell (it auto-detects **zsh** → `~/.zshrc` or **bash** → `~/.bashrc`).
+- creates the commands `agents-team` and `agents-team-personal` in `~/.local/bin`;
+- makes sure `~/.local/bin` is on your PATH in the right startup file for your shell (it auto-detects **zsh** → `~/.zshrc` or **bash** → `~/.bashrc`).
 
-After installing, **open a new terminal** (or run `source ~/.zshrc` / `source ~/.bashrc`) so the commands take effect.
+If `~/.local/bin` is already on your PATH, the commands work immediately. Otherwise, open a new terminal or run the `export PATH=...` line printed by the installer.
 
-> Prefer not to run a script? Save `agents_team.py` anywhere and add the alias yourself:
+> Prefer not to run a script? Save `agents_team.py` anywhere and add the command yourself:
 > ```bash
-> echo "alias agents-team='python3 /path/to/agents_team.py'" >> ~/.zshrc   # or ~/.bashrc
-> source ~/.zshrc
+> mkdir -p ~/.local/bin
+> chmod +x /path/to/agents_team.py
+> ln -sf /path/to/agents_team.py ~/.local/bin/agents-team
 > ```
 
 ---
@@ -162,7 +164,7 @@ Output is read as plain text by default (ANSI colors stripped). If a CLI emits J
 ## Troubleshooting
 
 **`command not found: agents-team`**
-Open a new terminal — the alias only applies to shells started after install. If it still fails, confirm the alias is in your shell's startup file (`~/.zshrc` for zsh, `~/.bashrc` for bash) and run `source` on it.
+Confirm `~/.local/bin` is on your PATH with `echo $PATH`. If it is missing, open a new terminal or run `export PATH="$HOME/.local/bin:$PATH"` in the current one.
 
 **`[error] 'claude' (profile 'work') is not on your PATH`**
 That profile's CLI wasn't found. Check it's installed and logged in (`claude --version`, `codex --version`) and that the name in `cmd`, inside the `PROFILES` block, is correct.
@@ -175,7 +177,7 @@ That profile's CLI wasn't found. Check it's installed and logged in (`claude --v
 
 On native Windows (no WSL), `agents_team.py` runs fine with Python, but:
 
-- there's no `bash`/`alias` — start it directly with `python agents_team.py` (or define a function in your PowerShell profile);
+- there's no bash-style command setup — start it directly with `python agents_team.py` (or define a function in your PowerShell profile);
 - `claude` and `codex` must be installed as **Windows** commands and on the PATH (an install done inside WSL is not visible to native Windows).
 
 If you already use WSL, staying there is the simplest path.
