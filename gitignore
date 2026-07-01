@@ -1,0 +1,10 @@
+# Saved conversation transcripts (may contain private/personal data)
+team_*.md
+
+# Python
+__pycache__/
+*.py[cod]
+
+# OS
+.DS_Store
+Thumbs.db
